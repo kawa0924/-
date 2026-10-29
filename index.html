@@ -25,6 +25,8 @@ input{font:inherit;padding:6px;border-radius:8px;border:1px solid var(--line);ba
 </style></head><body><main>
 <div style="display:flex;justify-content:space-between;align-items:center"><h1>島の開拓者</h1><div id="tb" class="row" style="display:none;margin:0"><button onclick="openBag()">バッグ</button><button onclick="openTrade()">通信</button><button onclick="openRules()">ルール</button></div></div>
 <div id="start" class="panel"><div>プレイ人数を選んでください</div><div class="row"><button onclick="newGame(2)">2人</button><button onclick="newGame(3)">3人</button><button onclick="newGame(4)">4人</button></div>
+<label style="display:block;margin-top:8px"><input type="checkbox" id="xb"> 拡張：蛮族の襲来（商人と蛮族）</label>
+<label style="display:block"><input type="checkbox" id="xf"> 拡張：漁師</label><label style="display:block"><input type="checkbox" id="xr"> 拡張：川</label><label style="display:block"><input type="checkbox" id="xm"> 拡張：商人</label><label style="display:block"><input type="checkbox" id="xe"> 拡張：イベントカード</label>
 <div class="row"><button onclick="openRules()">ルールを見る</button></div>
 <div id="onl" style="margin-top:10px;border-top:1px solid var(--line);padding-top:8px"><div>オンライン対戦（SkyWay）</div><div style="color:var(--mute);font-size:13px">ホスト：IDとシークレットキーを入れて部屋を作る。参加者：招待コードを貼って参加。</div><div class="row"><input id="aid" placeholder="アプリケーションID" autocomplete="off" style="flex:1 1 100%"><input id="sec" type="password" placeholder="シークレットキー" autocomplete="off" style="flex:1 1 100%"><select id="on"><option value="2">2人</option><option value="3">3人</option><option value="4">4人</option></select><button onclick="mk()">部屋を作る</button></div><div class="row"><input id="rc" placeholder="招待コード" autocomplete="off" style="flex:1"><button onclick="jn()">参加</button></div><div id="serr" style="color:var(--acc);font-size:13px"></div></div></div>
 <div id="game" style="display:none"><svg id="bd" viewBox="-250 -235 500 470"></svg>
@@ -68,22 +70,22 @@ function mkHarbor(){
   Object.values(E).forEach(e=>{e.h=0});
   H.forEach(h=>{for(let k=0;k<6;k++)E[[h.c[k],h.c[(k+1)%6]].sort().join('|')].h++});
   const co=Object.values(E).filter(e=>e.h==1).map(e=>({a:e.a,b:e.b,ang:Math.atan2(V[e.a].y+V[e.b].y,V[e.a].x+V[e.b].x)})).sort((x,y)=>x.ang-y.ang);
-  const ts=sh(['any','any','any','any','wood','brick','sheep','wheat','ore']);
+  CO=co;const ts=sh(['any','any','any','any','wood','brick','sheep','wheat','ore']);
   return [0,3,7,10,13,17,20,23,27].map((i,j)=>({a:co[i].a,b:co[i].b,t:ts[j]}));
 }
-const rate=(p,r)=>{let n=4;G.hb.forEach(h=>{if([h.a,h.b].some(v=>G.B[v]&&G.B[v].p==p)){if(h.t=='any')n=Math.min(n,3);else if(h.t==r)n=2}});return n};
+const rate=(p,r)=>{let n=4;G.hb.forEach(h=>{if([h.a,h.b].some(v=>G.B[v]&&G.B[v].p==p)){if(h.t=='any')n=Math.min(n,3);else if(h.t==r)n=2}});if(G.mh&&G.mh.p==p&&H[G.mh.h].t==r)n=Math.min(n,2);return n};
 function newGame(n){
   document.getElementById('start').style.display='none';document.getElementById('game').style.display='block';
   order=[];for(let i=0;i<n;i++)order.push(i);for(let i=n-1;i>=0;i--)order.push(i);
   build();
-  G={n,deck:sh([...Array(14).fill('knight'),...Array(5).fill('vp'),...Array(2).fill('road'),...Array(2).fill('plenty'),...Array(2).fill('mono')]),bought:[],played:false,free:0,p:Array.from({length:n},(_,i)=>i).map(i=>({res:{wood:0,brick:0,sheep:0,wheat:0,ore:0},dev:{knight:0,vp:0,road:0,plenty:0,mono:0},k:0})),B:{},R:{},rob:H.findIndex(h=>h.t=='desert'),
+  G={n,bb:(document.getElementById('xb')||{}).checked?{pos:0}:null,deck:sh([...Array(14).fill('knight'),...Array(5).fill('vp'),...Array(2).fill('road'),...Array(2).fill('plenty'),...Array(2).fill('mono')]),bought:[],played:false,free:0,p:Array.from({length:n},(_,i)=>i).map(i=>({res:{wood:0,brick:0,sheep:0,wheat:0,ore:0},dev:{knight:0,vp:0,road:0,plenty:0,mono:0},k:0})),B:{},R:{},rob:H.findIndex(h=>h.t=='desert'),
     cur:0,ph:'setup',si:0,sub:'settle',last:null,roll:0,mode:null,msg:'',win:-1};
-  G.hb=mkHarbor();G.bt=H.map(h=>h.t);G.bn=H.filter(h=>h.t!='desert').map(h=>h.n).reverse();G.msg='最初の家を置いてください。';
+  G.hb=mkHarbor();G.fg=ck('xf')?mkFish():null;G.rv=ck('xr')?mkRiver():null;G.mx=ck('xm');G.mh=null;G.evd=ck('xe')?evNew():null;G.bt=H.map(h=>h.t);G.bn=H.filter(h=>h.t!='desert').map(h=>h.n).reverse();G.msg='最初の家を置いてください。';
   draw();
 }
 let order=[];
 const cnt=p=>RES.reduce((s,r)=>s+G.p[p].res[r],0);
-const vp=p=>Object.values(G.B).reduce((s,b)=>s+(b.p==p?(b.c?2:1):0),0)+(G.lr&&G.lr.p==p?2:0)+(G.la&&G.la.p==p?2:0)+G.p[p].dev.vp;
+const vp=p=>Object.values(G.B).reduce((s,b)=>s+(b.p==p?(b.c?2:1):0),0)+(G.lr&&G.lr.p==p?2:0)+(G.la&&G.la.p==p?2:0)+G.p[p].dev.vp+(G.p[p].bv||0)+(G.mh&&G.mh.p==p?1:0);
 const afford=(p,c)=>Object.keys(c).every(r=>G.p[p].res[r]>=c[r]);
 const pay=(p,c)=>Object.keys(c).forEach(r=>G.p[p].res[r]-=c[r]);
 function roadLen(p){
@@ -133,13 +135,13 @@ function act(kind,k){if(!mine())return;
       else{G.cur=order[G.si];G.msg=NAMES[G.cur]+'：'+(G.si>=G.n?'2つ目の':'最初の')+'家を置いてください。'}
     }
   }else if(G.ph=='main'){
-    if(kind=='v'&&G.mode=='settle'&&canSettle(k,p)){pay(p,COST.settle);G.B[k]={p,c:false}}
+    if(kind=='v'&&G.mode=='settle'&&canSettle(k,p)){pay(p,COST.settle);G.B[k]={p,c:false};if(G.rv&&G.rv.some(e=>E[e].a==k||E[e].b==k))G.p[p].g=(G.p[p].g||0)+1}
     else if(kind=='v'&&G.mode=='city'&&G.B[k]&&G.B[k].p==p&&!G.B[k].c){pay(p,COST.city);G.B[k].c=true}
-    else if(kind=='e'&&G.mode=='road'&&canRoad(k,p)){if(G.free>0)G.free--;else pay(p,COST.road);G.R[k]=p}
+    else if(kind=='e'&&G.mode=='road'&&canRoad(k,p)){if(G.free>0)G.free--;else pay(p,COST.road);G.R[k]=p;if(G.rv&&G.rv.includes(k))G.p[p].g=(G.p[p].g||0)+1}
     else return;
     G.mode=G.free>0?'road':null;const nl=updateLR();G.msg='建設しました。'+(nl>=0?NAMES[nl]+'が最長交易路（'+G.lr.len+'本）を獲得しました。+2点':'');
     if(vp(p)>=10){G.win=p;G.msg=NAMES[p]+'の勝利！ 10点に到達しました。'}
-  }else if(G.ph=='robber'&&kind=='h'&&k!=G.rob){
+  }else if(G.ph=='merchant'&&kind=='h'&&H[k].t!='desert'&&H[k].c.some(v=>G.B[v]&&G.B[v].p==p)){G.mh={h:k,p};G.ph='main';G.msg=NAMES[p]+'が商人を'+JP[H[k].t]+'の土地に置きました。（+1点）'}else if(G.ph=='robber'&&kind=='h'&&k!=G.rob){
     G.rob=k;
     const vic=[...new Set(H[k].c.map(v=>G.B[v]&&G.B[v].p).filter(x=>x!==undefined&&x!==p&&cnt(x)>0))];
     G.msg='盗賊を動かしました。';
@@ -153,13 +155,81 @@ function act(kind,k){if(!mine())return;
   }
   draw();
 }
+let CO=[];
+const ck=id=>!!(document.getElementById(id)||{}).checked;
+function mkFish(){const n=sh([3,4,5,6,8,9,10,11]);return [5,15,25].map((i,j)=>({a:CO[i].a,b:CO[i].b,n:n[j]}))}
+function mkRiver(){
+  let v=CO[Math.floor(Math.random()*CO.length)].a;const seen=new Set([v]),r=[];
+  for(let i=0;i<6;i++){
+    const o=V[v].nb.filter(n=>!seen.has(n));if(!o.length)break;
+    const n=o.sort((a,b)=>V[b].hx.length-V[a].hx.length+Math.random()-.5)[0];
+    r.push([v,n].sort().join('|'));seen.add(n);v=n;
+  }
+  return r;
+}
+const evNew=()=>{const d=[];for(let a=1;a<=6;a++)for(let b=1;b<=6;b++)d.push(a+b);d.push('E0','E1','E2');return sh(d)};
+function evDraw(){
+  G.evm='';if(!G.evd.length)G.evd=evNew();
+  const c=G.evd.pop();if(typeof c=='number')return c;
+  if(c=='E0'){G.p.forEach(q=>q.res[RES[Math.floor(Math.random()*5)]]++);G.evm='イベント：豊作！ 全員が資源を1枚もらいました。';return 1}
+  if(c=='E1'){G.p.forEach(q=>{const b=RES.filter(r=>q.res[r]);if(b.length)q.res[b[Math.floor(Math.random()*b.length)]]--});G.evm='イベント：疫病… 全員が資源を1枚失いました。';return 1}
+  G.evm='イベント：盗賊の襲来！';return 7;
+}
+function extra(d){if(G.fg)G.fg.forEach(f=>{if(f.n==d)[f.a,f.b].forEach(v=>{const b=G.B[v];if(b)G.p[b.p].f=(G.p[b.p].f||0)+(b.c?2:1)})})}
+function openExt(){
+  const p=viewer();if(p<0)return modal('観戦中です。');
+  const my=p==G.cur&&mine()&&G.ph=='main'&&G.win<0,q=G.p[p],f=q.f||0,g=q.g||0;
+  const b=(on,t,h)=>`<div class="row"><button onclick="${h}" ${my&&on?'':'disabled'}>${t}</button></div>`;
+  let h='';
+  if(G.fg||G.rv)h+=`<div class="row">もらう資源 <select id="xr1">${RES.map(r=>`<option value="${r}">${JP[r]}</option>`).join('')}</select></div>`;
+  if(G.fg)h+=`<div>魚 ${f}匹</div>`+b(f>=3,'魚3匹 → 資源1枚',"xuse('f3')")+b(f>=5,'魚5匹 → 道1本（無料）',"xuse('f5')")+b(f>=7&&G.deck.length,'魚7匹 → 発展カード1枚',"xuse('f7')");
+  if(G.rv)h+=`<div>金貨 ${g}枚</div>`+b(g>=1,'金貨1枚 → 資源1枚',"xuse('g1')");
+  if(G.mx)h+=b(true,'商人を動かす（土地をタップ）',"xuse('m')");
+  modal(h||'拡張は選ばれていません。','ext');
+}
+function xuse(t){
+  const p=viewer();if(p!=G.cur||!mine()||G.ph!='main')return;
+  const q=G.p[p],r=(document.getElementById('xr1')||{}).value;
+  if(t=='f3'&&(q.f||0)>=3){q.f-=3;q.res[r]++;G.msg=NAMES[p]+'が魚3匹で'+JP[r]+'を得ました。'}
+  else if(t=='g1'&&(q.g||0)>=1){q.g--;q.res[r]++;G.msg=NAMES[p]+'が金貨で'+JP[r]+'を得ました。'}
+  else if(t=='f5'&&(q.f||0)>=5){q.f-=5;G.free=1;G.mode='road';G.msg='魚で道を1本無料で置けます。'}
+  else if(t=='f7'&&(q.f||0)>=7&&G.deck.length){q.f-=7;const c=G.deck.pop();q.dev[c]++;G.bought.push(c);G.msg=NAMES[p]+'が魚7匹で発展カードを1枚引きました。'}
+  else if(t=='m'){G.ph='merchant';G.msg='商人を置く土地（自分の家か街が隣り合う土地）をタップしてください。'}
+  else return;
+  closeM();draw();
+}
+function barb(){
+  if(!G.bb)return '';
+  if(Math.random()>=.5)return '蛮族の船は動きませんでした。';
+  if(++G.bb.pos<7)return '蛮族の船が進みました。';
+  G.bb.pos=0;
+  const cs=Object.values(G.B).filter(b=>b.c).length,B=cs+1,kk=i=>G.p[i].kk||0,D=G.p.reduce((s,q)=>s+(q.kk||0),0);
+  let m='蛮族が襲来！ 戦力'+B+'対騎士'+D+'。';
+  if(D>=B){
+    const mx=Math.max(...G.p.map((q,i)=>kk(i))),top=G.p.map((q,i)=>kk(i)==mx?i:-1).filter(i=>i>=0);
+    m+='撃退成功！';
+    if(mx>0&&top.length==1){G.p[top[0]].bv=(G.p[top[0]].bv||0)+1;m+=NAMES[top[0]]+'が守護者として+1点。'}
+  }else{
+    const hit=G.p.map((q,i)=>i).filter(i=>Object.values(G.B).some(b=>b.p==i&&b.c));
+    if(!hit.length)m+='被害はありませんでした。';
+    else{
+      const mn=Math.min(...hit.map(kk)),vic=hit.filter(i=>kk(i)==mn);
+      vic.forEach(i=>{const k=Object.keys(G.B).find(k=>G.B[k].p==i&&G.B[k].c);G.B[k].c=false});
+      m+='撃退失敗…'+vic.map(i=>NAMES[i]).join('・')+'の街が家に戻りました。';
+    }
+  }
+  const w=G.p.findIndex((q,i)=>vp(i)>=10);
+  if(w>=0&&G.win<0){G.win=w;m+=NAMES[w]+'が10点に到達し勝利！'}
+  G.p.forEach(q=>q.kk=0);
+  return m;
+}
 function roll(){if(!mine())return;
-  const d=1+Math.floor(Math.random()*6)+1+Math.floor(Math.random()*6);
-  G.roll=d;
+  const d=G.evd?evDraw():1+Math.floor(Math.random()*6)+1+Math.floor(Math.random()*6);
+  G.roll=d;G.bm=barb();extra(d);
   if(d==7){G.ph='robber';G.msg='7が出ました。盗賊を動かす六角形をタップしてください。'}
   else{
     H.forEach((h,i)=>{if(h.n==d&&i!=G.rob)h.c.forEach(v=>{const b=G.B[v];if(b)G.p[b.p].res[h.t]+=b.c?2:1})});
-    G.ph='main';G.msg='出目は'+d+'。資源を配りました。';
+    G.ph='main';G.msg=G.evm?'イベントカードが引かれました。':'出目は'+d+'。資源を配りました。';
   }
   draw();
 }
@@ -171,22 +241,23 @@ function trade(){if(!mine())return;
 }
 function setMode(m){if(!mine())return;G.mode=G.mode==m?null:m;draw()}
 function draw(){if(ON&&!remote)push();document.getElementById('tb').style.display='flex';
-  if(G.tr&&OPEN!='tr'&&(!ON||viewer()==G.tr.to))openTrade();else if(!G.tr&&OPEN=='tr')closeM();else if(OPEN=='bag')openBag();else if(OPEN=='dev')openDev();
+  if(G.tr&&OPEN!='tr'&&(!ON||viewer()==G.tr.to))openTrade();else if(!G.tr&&OPEN=='tr')closeM();else if(OPEN=='bag')openBag();else if(OPEN=='dev')openDev();else if(OPEN=='ext')openExt();
   const p=G.cur;let s='';
   H.forEach((h,i)=>{
     const pts=h.c.map(k=>V[k].x+','+V[k].y).join(' ');
-    const clk=G.ph=='robber'&&i!=G.rob;
+    const clk=(G.ph=='robber'&&i!=G.rob)||(G.ph=='merchant'&&h.t!='desert');
     s+=`<polygon points="${pts}" fill="${COL[h.t]}" stroke="#14101c" stroke-width="3" opacity=".92" ${clk?`style="cursor:pointer" onclick="act('h',${i})"`:''}/>`;
     if(h.t!='desert'){
       const hot=h.n==6||h.n==8;
       s+=`<circle cx="${h.cx}" cy="${h.cy}" r="14" fill="#f5ecd8"/><text x="${h.cx}" y="${h.cy+5}" text-anchor="middle" font-size="15" font-weight="bold" fill="${hot?'#c0203a':'#241c33'}">${h.n}</text>`;
       s+=`<text x="${h.cx}" y="${h.cy-20}" text-anchor="middle" font-size="11" fill="#14101c">${JP[h.t]}</text>`;
     }
+    if(G.mh&&G.mh.h==i)s+=`<circle cx="${h.cx-20}" cy="${h.cy+8}" r="9" fill="${PC[G.mh.p]}" stroke="#fff" stroke-width="2"/><text x="${h.cx-20}" y="${h.cy+12}" text-anchor="middle" font-size="11" fill="#fff">商</text>`;
     if(i==G.rob)s+=`<circle cx="${h.cx}" cy="${h.cy+(h.t=='desert'?0:22)}" r="9" fill="#14101c" stroke="#eee8f5" stroke-width="2"/>`;
     if(clk)s+=`<polygon points="${pts}" fill="#e0527a" opacity=".25" style="pointer-events:none"/>`;
   });
   Object.values(E).forEach(e=>{
-    const a=V[e.a],b=V[e.b],o=G.R[e.k];
+    if(G.rv&&G.rv.includes(e.k))s+=`<line x1="${V[e.a].x}" y1="${V[e.a].y}" x2="${V[e.b].x}" y2="${V[e.b].y}" stroke="#4fc3f7" stroke-width="9" stroke-linecap="round" opacity=".7"/>`;const a=V[e.a],b=V[e.b],o=G.R[e.k];
     if(o!==undefined)s+=`<line x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}" stroke="${PC[o]}" stroke-width="7" stroke-linecap="round"/>`;
     else{
       const ok=G.win<0&&((G.ph=='setup'&&G.sub=='road')||(G.ph=='main'&&G.mode=='road'&&(G.free>0||afford(p,COST.road))))&&canRoad(e.k,p);
@@ -206,7 +277,8 @@ function draw(){if(ON&&!remote)push();document.getElementById('tb').style.displa
   });
   G.hb.forEach(h=>{const va=V[h.a],vb=V[h.b],mx=(va.x+vb.x)/2,my=(va.y+vb.y)/2,d=Math.hypot(mx,my)||1,px=mx+mx/d*26,py=my+my/d*26,an=h.t=='any';
     s+=`<g style="pointer-events:none"><line x1="${px}" y1="${py}" x2="${va.x}" y2="${va.y}" stroke="#cdbf9a" stroke-width="2" stroke-dasharray="3 3"/><line x1="${px}" y1="${py}" x2="${vb.x}" y2="${vb.y}" stroke="#cdbf9a" stroke-width="2" stroke-dasharray="3 3"/><circle cx="${px}" cy="${py}" r="16" fill="${an?'#2b2440':COL[h.t]}" stroke="#cdbf9a" stroke-width="2"/><text x="${px}" y="${an?py+4:py-1}" text-anchor="middle" font-size="${an?12:10}" font-weight="bold" fill="#fff">${an?'3:1':'2:1'}</text>${an?'':`<text x="${px}" y="${py+11}" text-anchor="middle" font-size="11" fill="#fff">${JP[h.t]}</text>`}</g>`});
-  document.getElementById('bd').innerHTML=s;
+  if(G.fg)G.fg.forEach(f=>{const va=V[f.a],vb=V[f.b],mx=(va.x+vb.x)/2,my=(va.y+vb.y)/2,d=Math.hypot(mx,my)||1,px=mx+mx/d*26,py=my+my/d*26;s+=`<g style="pointer-events:none"><circle cx="${px}" cy="${py}" r="14" fill="#1e6f9f" stroke="#cdbf9a" stroke-width="2"/><text x="${px}" y="${py-2}" text-anchor="middle" font-size="9" fill="#fff">魚</text><text x="${px}" y="${py+10}" text-anchor="middle" font-size="11" font-weight="bold" fill="#fff">${f.n}</text></g>`});
+document.getElementById('bd').innerHTML=s;
   document.getElementById('msg').textContent=(ON&&SEATS.includes('')?'参加待ち（部屋コード '+CODE+'）。':'')+G.msg+(ON?'［部屋 '+CODE+'／あなた：'+(SEATS.includes(UID)?NAMES[SEATS.indexOf(UID)]:'観戦')+'］':'');
   document.getElementById('inv').style.display=ON&&SEATS[0]===UID&&SEATS.includes('')?'flex':'none';document.getElementById('hand').innerHTML=`<span class="dot" style="background:${PC[p]}"></span>${NAMES[p]}の手札：`+RES.map(r=>`${JP[r]}${G.p[p].res[r]}`).join(' ')+(G.roll?`　出目 ${G.roll}`:'');
   const m=G.ph=='main'&&G.win<0,opt=RES.map(r=>`<option value="${r}">${JP[r]}</option>`).join('');
@@ -217,12 +289,12 @@ function draw(){if(ON&&!remote)push();document.getElementById('tb').style.displa
    `<button class="${G.mode=='road'?'on':''}" onclick="setMode('road')" ${m&&afford(p,COST.road)?'':'disabled'}>道</button>`+
    `<button class="${G.mode=='settle'?'on':''}" onclick="setMode('settle')" ${m&&afford(p,COST.settle)?'':'disabled'}>家</button>`+
    `<button class="${G.mode=='city'?'on':''}" onclick="setMode('city')" ${m&&afford(p,COST.city)?'':'disabled'}>街</button>`+
-   `<button onclick="endTurn()" ${m?'':'disabled'}>手番終了</button><button onclick="openDev()" ${m?'':'disabled'}>発展カード</button>`+
+   `<button onclick="endTurn()" ${m?'':'disabled'}>手番終了</button><button onclick="openDev()" ${m?'':'disabled'}>発展カード</button>${G.fg||G.rv||G.mx?`<button onclick="openExt()" ${m?'':'disabled'}>拡張</button>`:''}`+
    `<span style="display:flex;gap:4px;align-items:center;width:100%"><select id="tg" ${m?'':'disabled'}>${opt}</select> →<select id="tt" ${m?'':'disabled'}>${opt}</select><button onclick="trade()" ${m?'':'disabled'}>交換</button></span>`+
    `<span style="color:var(--mute);width:100%;font-size:13px">交換レート（払う枚数）：${RES.map(r=>JP[r]+rate(G.cur,r)).join(' ')}</span>`+`<span style="color:var(--mute);width:100%;font-size:13px">道＝木土　家＝木土羊麦　街＝麦2鉱3（家を街に）　10点で勝利</span>`+
    `<button id="nb" onclick="showStart()">新しいゲーム</button>`;
   document.getElementById('tg').value=keep[0];document.getElementById('tt').value=keep[1];
-  if(!mine())document.querySelectorAll('#ctl button:not(#nb),#ctl select').forEach(e=>e.disabled=true);document.getElementById('bd').style.pointerEvents=mine()?'':'none';document.getElementById('pls').innerHTML=G.p.map((_,i)=>`<div class="pl ${i==p?'cur':''}"><span><span class="dot" style="background:${PC[i]}"></span>${NAMES[i]}</span><span>${G.lr&&G.lr.p==i?'★最長交易路　':''}${G.la&&G.la.p==i?'★最大騎士力　':''}${i==viewer()||G.win>=0?vp(i):vp(i)-G.p[i].dev.vp}点　手札${cnt(i)}枚　騎士${G.p[i].k}</span></div>`).join('');
+  if(!mine())document.querySelectorAll('#ctl button:not(#nb),#ctl select').forEach(e=>e.disabled=true);document.getElementById('bd').style.pointerEvents=mine()?'':'none';if(G.evm)document.getElementById('hand').innerHTML+='<br>'+G.evm;if(G.bb)document.getElementById('hand').innerHTML+=`<br>蛮族の船 ${'■'.repeat(G.bb.pos)}${'□'.repeat(7-G.bb.pos)}　騎士${G.p.reduce((s,q)=>s+(q.kk||0),0)}／蛮族${Object.values(G.B).filter(b=>b.c).length+1}${G.bm?'<br>'+G.bm:''}`;document.getElementById('pls').innerHTML=G.p.map((_,i)=>`<div class="pl ${i==p?'cur':''}"><span><span class="dot" style="background:${PC[i]}"></span>${NAMES[i]}</span><span>${G.lr&&G.lr.p==i?'★最長交易路　':''}${G.la&&G.la.p==i?'★最大騎士力　':''}${i==viewer()||G.win>=0?vp(i):vp(i)-G.p[i].dev.vp}点　手札${cnt(i)}枚　騎士${G.p[i].k}${G.fg?'　魚'+(G.p[i].f||0):''}${G.rv?'　金'+(G.p[i].g||0):''}</span></div>`).join('');
 }
 const viewer=()=>ON?SEATS.indexOf(UID):(G.tr?G.tr.to:G.cur);
 let OPEN='',DR=null;
@@ -230,7 +302,7 @@ const rs=o=>RES.filter(r=>o[r]).map(r=>JP[r]+o[r]).join(' ')||'なし';
 const cardH=(r,n)=>`<div class="cd" style="opacity:${n?1:.3}">${IMG[r]?`<img src="${IMG[r]}" alt="${JP[r]}">`:`<div class="wc">${JP[r]}</div>`}<b>×${n}</b></div>`;
 function modal(h,k){OPEN=k||'';document.getElementById('mb').innerHTML=h+'<div class="row"><button onclick="closeM()">閉じる</button></div>';document.getElementById('md').style.display='flex'}
 function closeM(){OPEN='';DR=null;document.getElementById('md').style.display='none'}
-function openRules(){modal(`<div style="line-height:1.7;font-size:14px"><b>目的</b><br>先に10点を取った人の勝ち。家は1点、街は2点です。<br><br><b>特別ポイント</b><br>最長交易路：つながった自分の道が5本以上で、いちばん長い人に2点。同じ長さなら先に持っていた人が守ります。相手の家で道が分断されることもあります。<br>最大騎士力：使った騎士が3枚以上で、いちばん多い人に2点。<br><br><b>発展カード</b><br>羊・麦・鉱を1枚ずつ払い、山札（全25枚）から1枚引きます。買ったターンは使えず、使えるのは1ターンに1枚、手番の中（サイコロの後）だけです。<br>騎士（14枚）：盗賊を動かして1枚奪う。<br>勝利点（5枚）：1点。使わずに持ちます。<br>街道建設（2枚）：道を2本無料で置く。<br>収穫（2枚）：好きな資源を2枚もらう。<br>独占（2枚）：好きな資源1種を全員から集める。<br><br><b>最初の配置</b><br>順番に家と道を1つずつ置き、最後の人から逆順でもう1セット置きます。2つ目の家に隣り合う土地から、資源を1枚ずつもらえます。<br><br><b>手番の流れ</b><br>1. サイコロを振る。出目と同じ数字の土地に隣り合う家は1枚、街は2枚の資源がもらえます。<br>2. 建設・取引をする。<br>3. 手番終了を押す。<br><br><b>7が出たとき</b><br>盗賊を動かす土地を選びます。その土地は盗賊がいる間は資源が出ません。隣に家のある相手がいれば、手札から1枚奪えます。<br><br><b>建設の費用</b><br>道：木1・土1<br>家：木1・土1・羊1・麦1<br>街：麦2・鉱3（自分の家を街にする）<br><br><b>置ける場所</b><br>家：となりの交点に他の家があると置けません。最初の配置以外は、自分の道につながる場所だけです。<br>道：自分の家か道につながる辺に置けます。<br><br><b>取引</b><br>銀行：同じ資源4枚を好きな資源1枚と交換できます。海ぞいの港マークにつながる家か街があると、3:1の港は3枚、2:1の港はその資源2枚で交換できます（海外貿易）。<br>プレイヤー同士：「通信」から、自分の手番に相手へ提案します。<br><br><b>この版で省いているもの</b><br>7のときの手札捨て。</div>`,'rules')}
+function openRules(){modal(`<div style="line-height:1.7;font-size:14px"><b>目的</b><br>先に10点を取った人の勝ち。家は1点、街は2点です。<br><br><b>特別ポイント</b><br>最長交易路：つながった自分の道が5本以上で、いちばん長い人に2点。同じ長さなら先に持っていた人が守ります。相手の家で道が分断されることもあります。<br>最大騎士力：使った騎士が3枚以上で、いちばん多い人に2点。<br><br><b>発展カード</b><br>羊・麦・鉱を1枚ずつ払い、山札（全25枚）から1枚引きます。買ったターンは使えず、使えるのは1ターンに1枚、手番の中（サイコロの後）だけです。<br>騎士（14枚）：盗賊を動かして1枚奪う。<br>勝利点（5枚）：1点。使わずに持ちます。<br>街道建設（2枚）：道を2本無料で置く。<br>収穫（2枚）：好きな資源を2枚もらう。<br>独占（2枚）：好きな資源1種を全員から集める。<br><br><b>最初の配置</b><br>順番に家と道を1つずつ置き、最後の人から逆順でもう1セット置きます。2つ目の家に隣り合う土地から、資源を1枚ずつもらえます。<br><br><b>手番の流れ</b><br>1. サイコロを振る。出目と同じ数字の土地に隣り合う家は1枚、街は2枚の資源がもらえます。<br>2. 建設・取引をする。<br>3. 手番終了を押す。<br><br><b>7が出たとき</b><br>盗賊を動かす土地を選びます。その土地は盗賊がいる間は資源が出ません。隣に家のある相手がいれば、手札から1枚奪えます。<br><br><b>拡張：蛮族の襲来（商人と蛮族）</b><br>開始画面でチェックすると有効になります。サイコロを振るたびに、50%の確率で蛮族の船が1つ進み、7つ進むと襲来します。<br>蛮族の戦力は、盤上の街の数＋1です。前回の襲来以降に使われた騎士の合計が戦力以上なら撃退成功で、最も多く使った人が1点（同数なら無し）。足りなければ失敗で、騎士の数が最も少ない人（街を持つ人）の街が1つ家に戻ります。襲来のあと、騎士の数はリセットされます。<br><br><b>拡張（開始画面でチェック）</b><br>漁師：海ぞいに3つの漁場（魚マークと数字）が出ます。その数字が出ると、隣り合う家は魚1匹、街は2匹もらえます。「拡張」ボタンで、魚3匹＝好きな資源1枚、5匹＝道1本を無料で、7匹＝発展カード1枚と交換できます。<br>川：青い川が1本できます。川に面した辺に道、川の交点に家を建てると金貨1枚。金貨1枚は好きな資源1枚と交換できます。<br>商人：「拡張」から、自分の家か街が隣り合う土地に商人を置けます。商人を持つ人は1点で、その土地の資源を2:1で銀行と交換できます。<br>イベントカード：サイコロの代わりに39枚の山札を引きます（出目36枚と、豊作・疫病・盗賊の襲来）。<br><br><b>建設の費用</b><br>道：木1・土1<br>家：木1・土1・羊1・麦1<br>街：麦2・鉱3（自分の家を街にする）<br><br><b>置ける場所</b><br>家：となりの交点に他の家があると置けません。最初の配置以外は、自分の道につながる場所だけです。<br>道：自分の家か道につながる辺に置けます。<br><br><b>取引</b><br>銀行：同じ資源4枚を好きな資源1枚と交換できます。海ぞいの港マークにつながる家か街があると、3:1の港は3枚、2:1の港はその資源2枚で交換できます（海外貿易）。<br>プレイヤー同士：「通信」から、自分の手番に相手へ提案します。<br><br><b>この版で省いているもの</b><br>7のときの手札捨て。</div>`,'rules')}
 const DN={knight:'騎士',vp:'勝利点',road:'街道建設',plenty:'収穫',mono:'独占'},DD={knight:'盗賊を動かして1枚奪う。3枚以上で最大騎士力',vp:'1点。使わずに持つ',road:'道を2本無料で置く',plenty:'好きな資源を2枚もらう',mono:'好きな資源1種を全員から集める'},DC={sheep:1,wheat:1,ore:1};
 const nB=(p,t)=>G.p[p].dev[t]-G.bought.filter(x=>x==t).length;
 function openDev(){
@@ -252,7 +324,7 @@ function useDev(t){
   }
   G.p[p].dev[t]--;G.played=true;closeM();
   if(t=='knight'){
-    G.p[p].k++;G.ph='robber';G.msg=NAMES[p]+'が騎士を使いました。盗賊を動かす土地をタップしてください。';
+    G.p[p].k++;G.p[p].kk=(G.p[p].kk||0)+1;G.ph='robber';G.msg=NAMES[p]+'が騎士を使いました。盗賊を動かす土地をタップしてください。';
     if(G.p[p].k>=3&&(!G.la||(G.la.p!=p&&G.p[p].k>G.p[G.la.p].k))){G.la={p};G.msg+=' 最大騎士力を獲得！+2点'}
     if(vp(p)>=10){G.win=p;G.msg=NAMES[p]+'の勝利！ 10点に到達しました。'}
   }else{G.free=2;G.mode='road';G.msg='街道建設：道を2本置いてください。'}
